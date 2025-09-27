@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Eye, Users, Clock, Shield, AlertCircle } from 'lucide-react';
+import { FileText, Eye, Users, Clock, Shield, AlertCircle, Bell } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 import { useContract } from '../hooks/useContract';
 
@@ -13,14 +13,16 @@ interface Evidence {
   isActive: boolean;
   hasAccess: boolean;
   hasRequested: boolean;
+  pendingRequests?: number;
 }
 
 export const EvidenceList: React.FC = () => {
   const { account, isConnected } = useWallet();
-  const { getUserEvidences, getEvidence } = useContract();
+  const { getUserEvidences, getEvidence, getPermissionRequests } = useContract();
   const [evidences, setEvidences] = useState<Evidence[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<number | null>(null);
 
   useEffect(() => {
     if (isConnected && account) {
@@ -36,7 +38,12 @@ export const EvidenceList: React.FC = () => {
 
     try {
       const evidenceIds = await getUserEvidences(account);
-      const evidencePromises = evidenceIds.map(id => getEvidence(id));
+      const evidencePromises = evidenceIds.map(async (id) => {
+        const evidence = await getEvidence(id);
+        const requests = await getPermissionRequests(id);
+        const pendingRequests = requests.filter((req: any) => req.status === 'pending').length;
+        return { ...evidence, pendingRequests };
+      });
       const evidenceData = await Promise.all(evidencePromises);
       setEvidences(evidenceData);
     } catch (err: any) {
@@ -73,6 +80,14 @@ export const EvidenceList: React.FC = () => {
         window.open(ipfsUrl, '_blank');
       }
     }
+  };
+
+  const handleManageAccess = (evidenceId: number) => {
+    setSelectedEvidenceId(evidenceId);
+    // Trigger a custom event to switch to access control tab
+    window.dispatchEvent(new CustomEvent('switchToAccessControl', { 
+      detail: { evidenceId } 
+    }));
   };
 
   if (!isConnected) {
@@ -194,9 +209,17 @@ export const EvidenceList: React.FC = () => {
                     <span>View</span>
                   </button>
                   
-                  <button className="flex items-center space-x-1 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition-colors">
+                  <button 
+                    onClick={() => handleManageAccess(evidence.id)}
+                    className="flex items-center space-x-1 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition-colors relative"
+                  >
                     <Users className="h-4 w-4" />
                     <span>Manage Access</span>
+                    {evidence.pendingRequests && evidence.pendingRequests > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
+                        {evidence.pendingRequests}
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>

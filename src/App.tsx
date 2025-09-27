@@ -11,6 +11,7 @@ type Tab = 'upload' | 'evidence' | 'search' | 'access' | 'settings';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('upload');
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<number | null>(null);
 
   const tabs = [
     { id: 'upload' as Tab, label: 'Submit Evidence', icon: Upload },
@@ -19,6 +20,19 @@ function App() {
     { id: 'access' as Tab, label: 'Access Control', icon: Users },
     { id: 'settings' as Tab, label: 'Settings', icon: Settings },
   ];
+
+  // Listen for evidence selection from other components
+  React.useEffect(() => {
+    const handleSwitchToAccessControl = (event: CustomEvent) => {
+      setActiveTab('access');
+      setSelectedEvidenceId(event.detail.evidenceId);
+    };
+
+    window.addEventListener('switchToAccessControl', handleSwitchToAccessControl as EventListener);
+    return () => {
+      window.removeEventListener('switchToAccessControl', handleSwitchToAccessControl as EventListener);
+    };
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -29,7 +43,7 @@ function App() {
       case 'search':
         return <EvidenceSearch />;
       case 'access':
-        return <AccessControl />;
+        return <AccessControl selectedEvidenceId={selectedEvidenceId} />;
       case 'settings':
         return <SettingsComponent />;
       default:
