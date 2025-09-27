@@ -9,21 +9,26 @@ const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || '0x12345678901
 export const useContract = () => {
   const { provider, signer, isConnected } = useWallet();
   const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [isContractReady, setIsContractReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setIsContractReady(false);
     if (provider && signer && isConnected) {
       try {
         // For demo purposes, we'll simulate contract connection
         setContract({ address: CONTRACT_ADDRESS } as any);
+        setIsContractReady(true);
         setError(null);
       } catch (err: any) {
         console.error('Contract initialization failed:', err);
         setError('Failed to initialize contract');
+        setIsContractReady(false);
       }
     } else {
       setContract(null);
+      setIsContractReady(false);
     }
   }, [provider, signer, isConnected]);
 
@@ -34,7 +39,7 @@ export const useContract = () => {
     return counter;
   };
   const submitEvidence = async (ipfsHash: string, encryptedKey: string, description: string) => {
-    if (!contract || !signer) throw new Error('Contract not initialized');
+    if (!isContractReady || !contract || !signer) throw new Error('Contract not initialized');
     
     setIsLoading(true);
     setError(null);
@@ -76,7 +81,7 @@ export const useContract = () => {
   };
 
   const getEvidence = async (evidenceId: number) => {
-    if (!contract || !signer) throw new Error('Contract not initialized');
+    if (!isContractReady || !contract || !signer) throw new Error('Contract not initialized');
 
     try {
       const stored = localStorage.getItem('evidenceData') || '[]';
@@ -108,7 +113,7 @@ export const useContract = () => {
   };
 
   const getUserEvidences = async (userAddress: string) => {
-    if (!contract) throw new Error('Contract not initialized');
+    if (!isContractReady || !contract) throw new Error('Contract not initialized');
 
     try {
       const stored = localStorage.getItem('evidenceData') || '[]';
@@ -123,7 +128,7 @@ export const useContract = () => {
   };
 
   const requestAccess = async (evidenceId: number) => {
-    if (!contract || !signer) throw new Error('Contract not initialized');
+    if (!isContractReady || !contract || !signer) throw new Error('Contract not initialized');
     
     setIsLoading(true);
     setError(null);
@@ -168,7 +173,7 @@ export const useContract = () => {
   };
 
   const grantAccess = async (evidenceId: number, userAddress: string) => {
-    if (!contract || !signer) throw new Error('Contract not initialized');
+    if (!isContractReady || !contract || !signer) throw new Error('Contract not initialized');
     
     setIsLoading(true);
     setError(null);
@@ -213,7 +218,7 @@ export const useContract = () => {
   };
 
   const denyAccess = async (evidenceId: number, userAddress: string) => {
-    if (!contract || !signer) throw new Error('Contract not initialized');
+    if (!isContractReady || !contract || !signer) throw new Error('Contract not initialized');
     
     setIsLoading(true);
     setError(null);
@@ -245,7 +250,7 @@ export const useContract = () => {
     }
   };
   const revokeAccess = async (evidenceId: number, userAddress: string) => {
-    if (!contract || !signer) throw new Error('Contract not initialized');
+    if (!isContractReady || !contract || !signer) throw new Error('Contract not initialized');
     
     setIsLoading(true);
     setError(null);
@@ -275,7 +280,7 @@ export const useContract = () => {
   };
 
   const getPermissionRequests = async (evidenceId: number) => {
-    if (!contract) throw new Error('Contract not initialized');
+    if (!isContractReady || !contract) throw new Error('Contract not initialized');
 
     try {
       const stored = localStorage.getItem('evidenceData') || '[]';
@@ -350,6 +355,7 @@ export const useContract = () => {
 
   return {
     contract,
+    isContractReady,
     isLoading,
     error,
     submitEvidence,

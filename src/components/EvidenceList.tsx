@@ -18,20 +18,20 @@ interface Evidence {
 
 export const EvidenceList: React.FC = () => {
   const { account, isConnected } = useWallet();
-  const { getUserEvidences, getEvidence, getPermissionRequests } = useContract();
+  const { getUserEvidences, getEvidence, getPermissionRequests, isContractReady } = useContract();
   const [evidences, setEvidences] = useState<Evidence[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (isConnected && account) {
+    if (isConnected && account && isContractReady) {
       loadUserEvidences();
     }
-  }, [isConnected, account]);
+  }, [isConnected, account, isContractReady]);
 
   const loadUserEvidences = async () => {
-    if (!account) return;
+    if (!account || !isContractReady) return;
 
     setIsLoading(true);
     setError(null);

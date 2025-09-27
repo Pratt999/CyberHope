@@ -26,7 +26,7 @@ interface Evidence {
 
 export const AccessControl: React.FC = () => {
   const { account, isConnected } = useWallet();
-  const { getUserEvidences, getEvidence, grantAccess, denyAccess, revokeAccess, getPermissionRequests, getAllAccessRequests, isLoading } = useContract();
+  const { getUserEvidences, getEvidence, grantAccess, denyAccess, revokeAccess, getPermissionRequests, getAllAccessRequests, isLoading, isContractReady } = useContract();
   
   const [evidences, setEvidences] = useState<Evidence[]>([]);
   const [selectedEvidence, setSelectedEvidence] = useState<number | null>(null);
@@ -37,14 +37,14 @@ export const AccessControl: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
 
   useEffect(() => {
-    if (isConnected && account) {
+    if (isConnected && account && isContractReady) {
       loadUserEvidences();
       loadAllAccessRequests();
     }
-  }, [isConnected, account]);
+  }, [isConnected, account, isContractReady]);
 
   const loadUserEvidences = async () => {
-    if (!account) return;
+    if (!account || !isContractReady) return;
 
     setIsLoadingData(true);
     try {
@@ -69,7 +69,7 @@ export const AccessControl: React.FC = () => {
   };
 
   const loadAllAccessRequests = async () => {
-    if (!account) return;
+    if (!account || !isContractReady) return;
 
     try {
       const requests = await getAllAccessRequests(account);

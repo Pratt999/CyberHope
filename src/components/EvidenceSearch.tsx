@@ -5,7 +5,7 @@ import { useContract } from '../hooks/useContract';
 
 export const EvidenceSearch: React.FC = () => {
   const { account, isConnected } = useWallet();
-  const { getEvidence, requestAccess, isLoading } = useContract();
+  const { getEvidence, requestAccess, isLoading, isContractReady } = useContract();
   
   const [searchId, setSearchId] = useState('');
   const [evidence, setEvidence] = useState<any>(null);
@@ -14,6 +14,11 @@ export const EvidenceSearch: React.FC = () => {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isContractReady) {
+      setSearchError('Contract not ready. Please wait...');
+      return;
+    }
     
     if (!searchId.trim()) {
       setSearchError('Please enter an evidence ID');
@@ -36,7 +41,7 @@ export const EvidenceSearch: React.FC = () => {
   };
 
   const handleRequestAccess = async () => {
-    if (!evidence) return;
+    if (!evidence || !isContractReady) return;
 
     try {
       await requestAccess(evidence.id);
