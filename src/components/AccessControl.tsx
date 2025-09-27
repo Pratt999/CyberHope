@@ -398,7 +398,10 @@ export const AccessControl: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-white">Incoming Access Requests</h3>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
+              <div className="text-sm text-gray-400">
+                {allAccessRequests.filter(req => req.status === 'pending').length} pending requests
+              </div>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
@@ -422,6 +425,12 @@ export const AccessControl: React.FC = () => {
             <div className="space-y-3">
               {allAccessRequests
                 .filter(req => filterStatus === 'all' || req.status === filterStatus)
+                .sort((a, b) => {
+                  // Sort pending requests first
+                  if (a.status === 'pending' && b.status !== 'pending') return -1;
+                  if (b.status === 'pending' && a.status !== 'pending') return 1;
+                  return b.timestamp - a.timestamp;
+                })
                 .map((request) => (
                 <div key={request.id} className="bg-gray-800 rounded-lg border border-gray-700 p-4">
                   <div className="flex items-start justify-between">
@@ -453,9 +462,11 @@ export const AccessControl: React.FC = () => {
                         <p className="text-gray-400 text-sm mb-2">
                           Requesting access to Evidence #{request.evidenceId}
                         </p>
-                        <p className="text-gray-300 text-sm mb-2">
+                        {request.evidenceDescription && (
+                          <p className="text-gray-300 text-sm mb-2">
                           "{request.evidenceDescription}"
-                        </p>
+                          </p>
+                        )}
                         <p className="text-gray-500 text-xs">
                           {formatDate(request.timestamp)}
                         </p>

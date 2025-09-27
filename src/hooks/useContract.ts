@@ -281,7 +281,15 @@ export const useContract = () => {
       const stored = localStorage.getItem('evidenceData') || '[]';
       const evidenceData = JSON.parse(stored);
       const evidence = evidenceData.find((e: any) => e.id === evidenceId);
-      return evidence?.accessRequests || [];
+      const requests = evidence?.accessRequests || [];
+      
+      // Return requests with proper structure
+      return requests.map((req: any) => ({
+        ...req,
+        address: req.address,
+        timestamp: req.timestamp,
+        status: req.status || 'pending'
+      }));
     } catch (err: any) {
       console.error('Get permission requests failed:', err);
       throw err;
@@ -313,9 +321,33 @@ export const useContract = () => {
       return allRequests.sort((a, b) => b.timestamp - a.timestamp);
     } catch (err: any) {
       console.error('Get all access requests failed:', err);
-      throw err;
+      return [];
     }
   };
+
+  const hasAccessPermission = async (evidenceId: number, userAddress: string) => {
+    try {
+      const stored = localStorage.getItem('evidenceData') || '[]';
+      const evidenceData = JSON.parse(stored);
+      const evidence = evidenceData.find((e: any) => e.id === evidenceId);
+      
+      if (!evidence) return false;
+      
+      // Check if user is the victim
+      if (evidence.victim.toLowerCase() === userAddress.toLowerCase()) {
+        return true;
+      }
+      
+      // Check if user has been granted access
+      return evidence.grantedAccess?.some((access: any) => 
+        access.address.toLowerCase() === userAddress.toLowerCase()
+      ) || false;
+    } catch (error) {
+      console.error('Check access permission failed:', error);
+      return false;
+    }
+  };
+
   return {
     contract,
     isLoading,
@@ -329,5 +361,6 @@ export const useContract = () => {
     revokeAccess,
     getPermissionRequests,
     getAllAccessRequests,
+    hasAccessPermission,
   };
 };
