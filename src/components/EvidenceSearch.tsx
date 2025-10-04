@@ -12,6 +12,12 @@ export const EvidenceSearch: React.FC = () => {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Add function to get all evidence for search
+  const getAllEvidence = () => {
+    const stored = localStorage.getItem('globalEvidenceData') || '[]';
+    return JSON.parse(stored);
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -30,8 +36,16 @@ export const EvidenceSearch: React.FC = () => {
     setEvidence(null);
 
     try {
-      const evidenceData = await getEvidence(parseInt(searchId));
-      setEvidence(evidenceData);
+      // First check if evidence exists in global storage
+      const allEvidence = getAllEvidence();
+      const evidenceExists = allEvidence.find((e: any) => e.id === parseInt(searchId));
+      
+      if (evidenceExists) {
+        const evidenceData = await getEvidence(parseInt(searchId));
+        setEvidence(evidenceData);
+      } else {
+        throw new Error('Evidence not found');
+      }
     } catch (error: any) {
       console.error('Search failed:', error);
       setSearchError('Evidence not found or access denied');

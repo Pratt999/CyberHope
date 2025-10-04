@@ -21,6 +21,12 @@ function App() {
     { id: 'settings' as Tab, label: 'Settings', icon: Settings },
   ];
 
+  // Add global refresh function
+  const refreshAllData = () => {
+    // Trigger refresh across all components
+    window.dispatchEvent(new CustomEvent('refreshData'));
+  };
+
   // Listen for evidence selection from other components
   React.useEffect(() => {
     const handleSwitchToAccessControl = (event: CustomEvent) => {

@@ -30,6 +30,13 @@ export const EvidenceList: React.FC = () => {
     }
   }, [isConnected, account, isContractReady]);
 
+  // Add refresh function to reload evidence
+  const refreshEvidence = () => {
+    if (isConnected && account && isContractReady) {
+      loadUserEvidences();
+    }
+  };
+
   const loadUserEvidences = async () => {
     if (!account || !isContractReady) return;
 

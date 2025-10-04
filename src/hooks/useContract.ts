@@ -33,10 +33,20 @@ export const useContract = () => {
   }, [provider, signer, isConnected]);
 
   const getNextEvidenceId = () => {
-    const stored = localStorage.getItem('evidenceCounter') || '0';
+    const stored = localStorage.getItem('globalEvidenceCounter') || '0';
     const counter = parseInt(stored) + 1;
-    localStorage.setItem('evidenceCounter', counter.toString());
+    localStorage.setItem('globalEvidenceCounter', counter.toString());
     return counter;
+  };
+
+  // Global evidence storage that simulates blockchain storage
+  const getGlobalEvidenceData = () => {
+    const stored = localStorage.getItem('globalEvidenceData') || '[]';
+    return JSON.parse(stored);
+  };
+
+  const setGlobalEvidenceData = (data: any[]) => {
+    localStorage.setItem('globalEvidenceData', JSON.stringify(data));
   };
   const submitEvidence = async (ipfsHash: string, encryptedKey: string, description: string) => {
     if (!isContractReady || !contract || !signer) throw new Error('Contract not initialized');
@@ -65,10 +75,9 @@ export const useContract = () => {
       };
       
       // Store in localStorage for persistence
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       evidenceData.push(newEvidence);
-      localStorage.setItem('evidenceData', JSON.stringify(evidenceData));
+      setGlobalEvidenceData(evidenceData);
 
       setIsLoading(false);
       return { success: true, txHash: `0x${Math.random().toString(16).substr(2, 64)}`, evidenceId };
@@ -84,8 +93,7 @@ export const useContract = () => {
     if (!isContractReady || !contract || !signer) throw new Error('Contract not initialized');
 
     try {
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       const evidence = evidenceData.find((e: any) => e.id === evidenceId);
       
       if (!evidence) {
@@ -116,8 +124,7 @@ export const useContract = () => {
     if (!isContractReady || !contract) throw new Error('Contract not initialized');
 
     try {
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       return evidenceData
         .filter((e: any) => e.victim.toLowerCase() === userAddress.toLowerCase())
         .map((e: any) => e.id);
@@ -137,8 +144,7 @@ export const useContract = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const userAddress = await signer.getAddress();
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       const evidenceIndex = evidenceData.findIndex((e: any) => e.id === evidenceId);
       
       if (evidenceIndex !== -1) {
@@ -162,7 +168,7 @@ export const useContract = () => {
         }
       }
       
-      setIsLoading(false);
+        setGlobalEvidenceData(evidenceData);
       return { success: true, txHash: `0x${Math.random().toString(16).substr(2, 64)}` };
     } catch (err: any) {
       console.error('Request access failed:', err);
@@ -181,8 +187,7 @@ export const useContract = () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       const evidenceIndex = evidenceData.findIndex((e: any) => e.id === evidenceId);
       
       if (evidenceIndex !== -1) {
@@ -204,7 +209,7 @@ export const useContract = () => {
           }
         }
         
-        localStorage.setItem('evidenceData', JSON.stringify(evidenceData));
+        setGlobalEvidenceData(evidenceData);
       }
       
       setIsLoading(false);
@@ -226,8 +231,7 @@ export const useContract = () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       const evidenceIndex = evidenceData.findIndex((e: any) => e.id === evidenceId);
       
       if (evidenceIndex !== -1 && evidenceData[evidenceIndex].accessRequests) {
@@ -237,7 +241,7 @@ export const useContract = () => {
         if (requestIndex !== -1) {
           evidenceData[evidenceIndex].accessRequests[requestIndex].status = 'denied';
         }
-        localStorage.setItem('evidenceData', JSON.stringify(evidenceData));
+        setGlobalEvidenceData(evidenceData);
       }
       
       setIsLoading(false);
@@ -258,15 +262,14 @@ export const useContract = () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       const evidenceIndex = evidenceData.findIndex((e: any) => e.id === evidenceId);
       
       if (evidenceIndex !== -1 && evidenceData[evidenceIndex].grantedAccess) {
         evidenceData[evidenceIndex].grantedAccess = evidenceData[evidenceIndex].grantedAccess.filter(
           (access: any) => access.address.toLowerCase() !== userAddress.toLowerCase()
         );
-        localStorage.setItem('evidenceData', JSON.stringify(evidenceData));
+        setGlobalEvidenceData(evidenceData);
       }
       
       setIsLoading(false);
@@ -283,8 +286,7 @@ export const useContract = () => {
     if (!isContractReady || !contract) throw new Error('Contract not initialized');
 
     try {
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       const evidence = evidenceData.find((e: any) => e.id === evidenceId);
       const requests = evidence?.accessRequests || [];
       
@@ -303,8 +305,7 @@ export const useContract = () => {
 
   const getAllAccessRequests = async (userAddress: string) => {
     try {
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       
       const userEvidences = evidenceData.filter((e: any) => 
         e.victim.toLowerCase() === userAddress.toLowerCase()
@@ -332,8 +333,7 @@ export const useContract = () => {
 
   const hasAccessPermission = async (evidenceId: number, userAddress: string) => {
     try {
-      const stored = localStorage.getItem('evidenceData') || '[]';
-      const evidenceData = JSON.parse(stored);
+      const evidenceData = getGlobalEvidenceData();
       const evidence = evidenceData.find((e: any) => e.id === evidenceId);
       
       if (!evidence) return false;
