@@ -1,78 +1,179 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ethers } from 'ethers';
-import { useWallet } from './useWallet';
-import contractABI from '../abi/DigitalEvidenceWallet.json';
+import EvidenceStorageABI from '../artifacts/contracts/EvidenceStorage.sol/EvidenceStorage.json';
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || ''; // from .env
+// Replace with your deployed contract address
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0xYourContractAddressHere";
 
 export const useContract = () => {
-  const { provider, account, isConnected } = useWallet();
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const initContract = async () => {
-      try {
-        setError(null);
-
-        if (!isConnected || !provider) {
-          setContract(null);
-          return;
-        }
-
-        const signer = provider.getSigner();
-        const connectedContract = new ethers.Contract(
-          CONTRACT_ADDRESS,
-          contractABI,
-          signer
-        );
-
-        setContract(connectedContract);
-      } catch (err: any) {
-        console.error('Contract init failed:', err);
-        setError('Failed to connect to contract.');
-      }
-    };
-
-    initContract();
-  }, [provider, isConnected]);
-
-  // Upload evidence (store hash and metadata)
-  const uploadEvidence = async (hash: string, metadata: string) => {
-    if (!contract) throw new Error('Contract not connected.');
-    const tx = await contract.storeEvidence(hash, metadata);
-    await tx.wait();
-    return tx;
+  const getContract = async () => {
+    if (!(window as any).ethereum) throw new Error("MetaMask not detected");
+    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    const signer = await provider.getSigner();
+    return new ethers.Contract(CONTRACT_ADDRESS, EvidenceStorageABI.abi, signer);
   };
 
-  // Request access for a particular user
-  const requestAccess = async (targetAddress: string) => {
-    if (!contract) throw new Error('Contract not connected.');
-    const tx = await contract.requestAccess(targetAddress);
-    await tx.wait();
-    return tx;
+  // Submit new evidence
+  const submitEvidence = async (ipfsHash: string, encryptedKey: string, description: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const contract = await getContract();
+      const tx = await contract.submitEvidence(ipfsHash, encryptedKey, description);
+      const receipt = await tx.wait();
+      return receipt;
+    } catch (err: any) {
+      console.error("submitEvidence error:", err);
+      setError(err.message || "Failed to submit evidence");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Get all evidence owned by the connected account
-  const getMyEvidence = async () => {
-    if (!contract || !account) throw new Error('Contract not connected.');
-    const evidenceList = await contract.getEvidenceByOwner(account);
-    return evidenceList;
+  // Request access to someone’s evidence
+  const requestAccess = async (evidenceId: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const contract = await getContract();
+      const tx = await contract.requestAccess(evidenceId);
+      await tx.wait();
+    } catch (err: any) {
+      console.error("requestAccess error:", err);
+      setError(err.message || "Access request failed");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Check if current user has access to a particular evidence hash
-  const hasAccess = async (hash: string) => {
-    if (!contract || !account) throw new Error('Contract not connected.');
-    const access = await contract.hasAccess(account, hash);
-    return access;
+  // Victim grants access to a requester
+  const grantAccess = async (evidenceId: number, user: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const contract = await getContract();
+      const tx = await contract.grantAccess(evidenceId, user);
+      await tx.wait();
+    } catch (err: any) {
+      console.error("grantAccess error:", err);
+      setError(err.message || "Failed to grant access");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Victim rejects an access request
+  const rejectAccess = async (evidenceId: number, user: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const contract = await getContract();
+      const tx = await contract.rejectAccess(evidenceId, user);
+      await tx.wait();
+    } catch (err: any) {
+      console.error("rejectAccess error:", err);
+      setError(err.message || "Failed to reject access");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Victim revokes access from a user
+  const revokeAccess = async (evidenceId: number, user: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const contract = await getContract();
+      const tx = await contract.revokeAccess(evidenceId, user);
+      await tx.wait();
+    } catch (err: any) {
+      console.error("revokeAccess error:", err);
+      setError(err.message || "Failed to revoke access");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch detailed evidence (returns empty strings if no permission)
+  const getEvidence = async (evidenceId: number) => {
+    try {
+      const contract = await getContract();
+      return await contract.getEvidence(evidenceId);
+    } catch (err: any) {
+      console.error("getEvidence error:", err);
+      setError(err.message || "Failed to fetch evidence");
+      throw err;
+    }
+  };
+
+  // Fetch summary for listing
+  const getEvidenceSummary = async (evidenceId: number) => {
+    try {
+      const contract = await getContract();
+      return await contract.getEvidenceSummary(evidenceId);
+    } catch (err: any) {
+      console.error("getEvidenceSummary error:", err);
+      setError(err.message || "Failed to fetch evidence summary");
+      throw err;
+    }
+  };
+
+  // Victim sees all access requests
+  const getPermissionRequests = async (evidenceId: number) => {
+    try {
+      const contract = await getContract();
+      return await contract.getPermissionRequests(evidenceId);
+    } catch (err: any) {
+      console.error("getPermissionRequests error:", err);
+      setError(err.message || "Failed to fetch permission requests");
+      throw err;
+    }
+  };
+
+  // Victim sees who currently has access
+  const getGrantedUsers = async (evidenceId: number) => {
+    try {
+      const contract = await getContract();
+      return await contract.getGrantedUsers(evidenceId);
+    } catch (err: any) {
+      console.error("getGrantedUsers error:", err);
+      setError(err.message || "Failed to fetch granted users");
+      throw err;
+    }
+  };
+
+  // User sees all evidence they submitted
+  const getUserEvidences = async (address: string) => {
+    try {
+      const contract = await getContract();
+      return await contract.getUserEvidences(address);
+    } catch (err: any) {
+      console.error("getUserEvidences error:", err);
+      setError(err.message || "Failed to fetch user evidences");
+      throw err;
+    }
   };
 
   return {
-    contract,
+    loading,
     error,
-    uploadEvidence,
+    submitEvidence,
     requestAccess,
-    getMyEvidence,
-    hasAccess
+    grantAccess,
+    rejectAccess,
+    revokeAccess,
+    getEvidence,
+    getEvidenceSummary,
+    getPermissionRequests,
+    getGrantedUsers,
+    getUserEvidences
   };
 };
